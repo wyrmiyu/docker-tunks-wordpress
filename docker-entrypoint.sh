@@ -1,4 +1,8 @@
 #!/bin/bash
+# Orginally taken from official Docker image repository at:
+# https://github.com/docker-library/wordpress/blob/master/docker-entrypoint.sh
+# Some modifications applied.
+#
 set -euo pipefail
 
 # usage: file_env VAR [DEFAULT]
