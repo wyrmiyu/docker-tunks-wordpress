@@ -54,6 +54,7 @@ if [[ "$1" == apache2* ]] || [ "$1" == php-fpm ]; then
   )
   envs=(
     WORDPRESS_DB_HOST
+    WORDPRESS_DB_PORT
     WORDPRESS_DB_USER
     WORDPRESS_DB_PASSWORD
     WORDPRESS_DB_NAME
@@ -85,6 +86,7 @@ if [[ "$1" == apache2* ]] || [ "$1" == php-fpm ]; then
   # only touch "wp-config.php" if we have environment-supplied configuration values
   if [ "$haveConfig" ]; then
     : "${WORDPRESS_DB_HOST:=mysql}"
+    : "${WORDPRESS_DB_PORT:=3306}"
     : "${WORDPRESS_DB_USER:=root}"
     : "${WORDPRESS_DB_PASSWORD:=}"
     : "${WORDPRESS_DB_NAME:=wordpress}"
@@ -157,6 +159,18 @@ EOPHP
     if [ "$WORDPRESS_DEBUG" ]; then
       set_config 'WP_DEBUG' 1 boolean
     fi
+
+    db_wait_timeout=500
+    echo "Wait max $db_wait_timeout secs for DB to become available..."
+    while ! bash -c "echo -n > /dev/tcp/$WORDPRESS_DB_HOST/$WORDPRESS_DB_PORT"; do
+      sleep 1
+      (( db_wait_timeout-- ))
+      if [[ $db_wait_timeout = 0 ]]; then
+        echo "ERROR: Timeout while waiting for DB to come online" 1>&2
+        exit 1
+      fi
+    done
+    echo "TCP connnection to DB established, continuing..."
 
     TERM=dumb php -- <<'EOPHP'
 <?php
