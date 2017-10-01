@@ -201,7 +201,9 @@ $mysql->close();
 EOPHP
   fi
 
-  # now that we're definitely done writing configuration, let's clear out the relevant envrionment variables (so that stray "phpinfo()" calls don't leak secrets from our code)
+  # now that we're definitely done writing configuration,
+  # let's clear out the relevant environment variables
+  # so that stray "phpinfo()" calls don't leak secrets from our code
   for e in "${envs[@]}"; do
     unset "$e"
   done
