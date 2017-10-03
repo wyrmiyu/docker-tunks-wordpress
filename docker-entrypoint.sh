@@ -160,9 +160,9 @@ EOPHP
       set_config 'WP_DEBUG' 1 boolean
     fi
 
-    db_wait_timeout=500
-    echo "Wait max $db_wait_timeout secs for DB to become available..."
-    while ! bash -c "echo -n > /dev/tcp/$WORDPRESS_DB_HOST/$WORDPRESS_DB_PORT"; do
+    db_wait_timeout=30
+    echo "Waiting for DB to become available..."
+    until bash -c "echo -n > /dev/tcp/$WORDPRESS_DB_HOST/$WORDPRESS_DB_PORT"; do
       sleep 1
       (( db_wait_timeout-- ))
       if [[ $db_wait_timeout = 0 ]]; then
