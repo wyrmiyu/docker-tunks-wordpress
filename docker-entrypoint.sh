@@ -28,13 +28,33 @@ file_env() {
 }
 
 if [[ "$1" == apache2* ]] || [ "$1" == php-fpm ]; then
-  if ! [ -e index.php -a -e wp-includes/version.php ]; then
+  if [ "$(id -u)" = '0' ]; then
+    case "$1" in
+      apache2*)
+        user="${APACHE_RUN_USER:-www-data}"
+        group="${APACHE_RUN_GROUP:-www-data}"
+        ;;
+      *) # php-fpm
+        user='www-data'
+        group='www-data'
+        ;;
+    esac
+  else
+    user="$(id -u)"
+    group="$(id -g)"
+  fi
+
+  if [ ! -e index.php ] && [ ! -e wp-includes/version.php ]; then
     echo >&2 "WordPress not found in $PWD - copying now..."
     if [ "$(ls -A)" ]; then
       echo >&2 "WARNING: $PWD is not empty - press Ctrl+C now if this is an error!"
       ( set -x; ls -A; sleep 10 )
     fi
-    tar cf - --one-file-system -C /usr/src/wordpress . | tar xf -
+    tar --create \
+      --file - \
+      --directory /usr/src/wordpress \
+      --owner "$user" --group "$group" \
+      . | tar --extract --file -
     echo >&2 "Complete! WordPress has been successfully copied to $PWD"
   fi
 
@@ -58,9 +78,12 @@ if [[ "$1" == apache2* ]] || [ "$1" == php-fpm ]; then
     WORDPRESS_DB_USER
     WORDPRESS_DB_PASSWORD
     WORDPRESS_DB_NAME
+    WORDPRESS_DB_CHARSET
+    WORDPRESS_DB_COLLATE
     "${uniqueEnvs[@]/#/WORDPRESS_}"
     WORDPRESS_TABLE_PREFIX
     WORDPRESS_DEBUG
+    WORDPRESS_CONFIG_EXTRA
   )
   haveConfig=
   for e in "${envs[@]}"; do
@@ -90,6 +113,8 @@ if [[ "$1" == apache2* ]] || [ "$1" == php-fpm ]; then
     : "${WORDPRESS_DB_USER:=root}"
     : "${WORDPRESS_DB_PASSWORD:=}"
     : "${WORDPRESS_DB_NAME:=wordpress}"
+    : "${WORDPRESS_DB_CHARSET:=utf8}"
+    : "${WORDPRESS_DB_COLLATE:=}"
 
     # version 4.4.1 decided to switch to windows line endings, that breaks our seds and awks
     # https://github.com/docker-library/wordpress/issues/116
@@ -97,7 +122,17 @@ if [[ "$1" == apache2* ]] || [ "$1" == php-fpm ]; then
     sed -ri -e 's/\r$//' wp-config*
 
     if [ ! -e wp-config.php ]; then
-      awk '/^\/\*.*stop editing.*\*\/$/ && c == 0 { c = 1; system("cat") } { print }' wp-config-sample.php > wp-config.php <<'EOPHP'
+      awk '
+        /^\/\*.*stop editing.*\*\/$/ && c == 0 {
+          c = 1
+          system("cat")
+          if (ENVIRON["WORDPRESS_CONFIG_EXTRA"]) {
+            print "// WORDPRESS_CONFIG_EXTRA"
+            print ENVIRON["WORDPRESS_CONFIG_EXTRA"] "\n"
+          }
+        }
+        { print }
+      ' wp-config-sample.php > wp-config.php <<'EOPHP'
 // If we're behind a proxy server and using HTTPS, we need to alert Wordpress of that fact
 // see also http://codex.wordpress.org/Administration_Over_SSL#Using_a_Reverse_Proxy
 if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
@@ -105,6 +140,13 @@ if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROT
 }
 
 EOPHP
+    elif [ -e wp-config.php ] && [ -n "$WORDPRESS_CONFIG_EXTRA" ] && [[ "$(< wp-config.php)" != *"$WORDPRESS_CONFIG_EXTRA"* ]]; then
+      # (if the config file already contains the requested PHP code, don't print a warning)
+      echo >&2
+      echo >&2 'WARNING: environment variable "WORDPRESS_CONFIG_EXTRA" is set, but "wp-config.php" already exists'
+      echo >&2 '  The contents of this variable will _not_ be inserted into the existing "wp-config.php" file.'
+      echo >&2 '  (see https://github.com/docker-library/wordpress/issues/333 for more details)'
+      echo >&2
     fi
 
     # see http://stackoverflow.com/a/2705678/433558
@@ -138,6 +180,8 @@ EOPHP
     set_config 'DB_USER' "$WORDPRESS_DB_USER"
     set_config 'DB_PASSWORD' "$WORDPRESS_DB_PASSWORD"
     set_config 'DB_NAME' "$WORDPRESS_DB_NAME"
+    set_config 'DB_CHARSET' "$WORDPRESS_DB_CHARSET"
+    set_config 'DB_COLLATE' "$WORDPRESS_DB_COLLATE"
 
     for unique in "${uniqueEnvs[@]}"; do
       uniqVar="WORDPRESS_$unique"
