@@ -19,6 +19,7 @@ services:
         - SVCGROUP=${SVCGROUP}
       context: .
       dockerfile: Dockerfile.wordpress
+    image: tunks/wordpress
     environment:
       - "WORDPRESS_DB_HOST=mariadb"
       - "WORDPRESS_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}"
@@ -44,6 +45,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.nginx
+    image: tunks/nginx
     ports:
       - "${EXTERNAL_HOST_IP}:${EXTERNAL_HOST_PORT}:80"
     volumes:
