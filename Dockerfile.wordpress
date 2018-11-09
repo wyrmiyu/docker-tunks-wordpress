@@ -2,10 +2,8 @@ FROM php:7.1-fpm
 
 ARG WORDPRESS_VERSION
 ARG WORDPRESS_SHA1
-ARG SVCUSER
-ARG SVCUID
-ARG SVCGROUP
-ARG SVCGID
+ARG SVCUSER=www-data
+ARG SVCGROUP=www-data
 
 COPY docker-entrypoint.sh /usr/local/bin/
 
@@ -37,8 +35,8 @@ RUN set -ex; \
     # upstream tarballs include ./wordpress/ so this gives us /usr/src/wordpress
     tar -xzf wordpress.tar.gz -C /usr/src/; \
     rm wordpress.tar.gz; \
-    groupadd --gid $SVCGID $SVCGROUP; \
-    useradd --system --uid $SVCUID --gid $SVCGID $SVCUSER; \
+    getent group $SVCGROUP || groupadd --system $SVCGROUP; \
+    getent passwd $SVCUSER || useradd --system --gid $SVCGROUP $SVCUSER; \
     chown -R $SVCUSER:$SVCGROUP /usr/src/wordpress /var/www/html; \
     { echo; \
       echo '/** Security Hardenings'; \
@@ -55,4 +53,3 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 USER $SVCUSER
 
 CMD ["php-fpm"]
-

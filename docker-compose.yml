@@ -1,0 +1,59 @@
+version: "2"
+services:
+  mariadb:
+    image: mariadb:latest
+    environment:
+      - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"
+    volumes:
+      - mariadb:/var/lib/mysql
+    restart: always
+
+  wordpress:
+    depends_on: 
+      - mariadb
+    build:
+      args:
+        - WORDPRESS_VERSION=${WORDPRESS_VERSION}
+        - WORDPRESS_SHA1=${WORDPRESS_SHA1}
+        - SVCUSER=${SVCUSER}
+        - SVCGROUP=${SVCGROUP}
+      context: .
+      dockerfile: Dockerfile.wordpress
+    environment:
+      - "WORDPRESS_DB_HOST=db"
+      - "WORDPRESS_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}"
+      - "WORDPRESS_TABLE_PREFIX=${WORDPRESS_TABLE_PREFIX}"
+      - "WORDPRESS_DEBUG=${WORDPRESS_DEBUG}"
+      - "WORDPRESS_AUTH_KEY=${AUTH_KEY}"
+      - "WORDPRESS_SECURE_AUTH_KEY=${SECURE_AUTH_KEY}"
+      - "WORDPRESS_LOGGED_IN_KEY=${LOGGED_IN_KEY}"
+      - "WORDPRESS_NONCE_KEY=${NONCE_KEY}"
+      - "WORDPRESS_AUTH_SALT=${AUTH_SALT}"
+      - "WORDPRESS_SECURE_AUTH_SALT=${SECURE_AUTH_SALT}"
+      - "WORDPRESS_LOGGED_IN_SALT=${LOGGED_IN_SALT}"
+      - "WORDPRESS_NONCE_SALT=${NONCE_SALT}"
+    volumes:
+      - docroot:/var/www/html
+    links:
+      - mariadb
+    restart: always
+
+  nginx:
+    depends_on:
+        - wordpress
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "${EXTERNAL_HOST_IP}:${EXTERNAL_HOST_PORT}:80"
+    volumes:
+      - docroot:/var/www/html
+      - nginx_log:/var/log/nginx
+    links:
+      - wordpress
+    restart: always
+ 
+volumes:
+  mariadb:
+  docroot:
+  nginx_log:
