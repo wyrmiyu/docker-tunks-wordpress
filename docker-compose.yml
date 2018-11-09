@@ -17,6 +17,8 @@ services:
         - WORDPRESS_SHA1=${WORDPRESS_SHA1}
         - SVCUSER=${SVCUSER}
         - SVCGROUP=${SVCGROUP}
+        - SVCUID=${SVCUID}
+        - SVCGID=${SVCGID}
       context: .
       dockerfile: Dockerfile.wordpress
     image: tunks/wordpress

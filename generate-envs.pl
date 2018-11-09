@@ -37,3 +37,5 @@ print("EXTERNAL_HOST_IP=127.0.0.1\n");
 print("EXTERNAL_HOST_PORT=8080\n");
 print("SVCUSER=www-data\n");
 print("SVCGROUP=www-data\n");
+print("SVCUID=33\n");
+print("SVCGID=33\n");
