@@ -4,6 +4,8 @@ ARG WORDPRESS_VERSION
 ARG WORDPRESS_SHA1
 ARG SVCUSER=www-data
 ARG SVCGROUP=www-data
+ARG SVCUID=33
+ARG SVCGID=33
 
 COPY docker-entrypoint.sh /usr/local/bin/
 
@@ -35,8 +37,8 @@ RUN set -ex; \
     # upstream tarballs include ./wordpress/ so this gives us /usr/src/wordpress
     tar -xzf wordpress.tar.gz -C /usr/src/; \
     rm wordpress.tar.gz; \
-    getent group $SVCGROUP || groupadd --system $SVCGROUP; \
-    getent passwd $SVCUSER || useradd --system --gid $SVCGROUP $SVCUSER; \
+    getent group $SVCGROUP || groupadd --system --gid $SVCGID $SVCGROUP; \
+    getent passwd $SVCUSER || useradd -s /bin/bash --system --uid $SVCUID --gid $SVCGID $SVCUSER; \
     chown -R $SVCUSER:$SVCGROUP /usr/src/wordpress /var/www/html; \
     { echo; \
       echo '/** Security Hardenings'; \
