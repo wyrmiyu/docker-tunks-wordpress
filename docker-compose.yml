@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile.wordpress
     environment:
-      - "WORDPRESS_DB_HOST=db"
+      - "WORDPRESS_DB_HOST=mariadb"
       - "WORDPRESS_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}"
       - "WORDPRESS_TABLE_PREFIX=${WORDPRESS_TABLE_PREFIX}"
       - "WORDPRESS_DEBUG=${WORDPRESS_DEBUG}"
